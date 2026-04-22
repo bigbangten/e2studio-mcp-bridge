@@ -72,7 +72,10 @@ public final class E2studioInventory {
             tool.put("contributor", el.getContributor().getName());
 
             // Associated views (heuristic: views whose id is in the same namespace)
-            String prefix = id.substring(0, id.indexOf(".perspective"));
+            // Renesas perspectives end with ...Perspective (e.g. RAConfigurationPerspective),
+            // so strip the last dot-segment instead of searching for ".perspective" literal.
+            int lastDot = id.lastIndexOf('.');
+            String prefix = lastDot > 0 ? id.substring(0, lastDot + 1) : id;
             List<Map<String, Object>> views = new ArrayList<>();
             for (IConfigurationElement v : reg.getConfigurationElementsFor("org.eclipse.ui.views")) {
                 String vid = v.getAttribute("id");
