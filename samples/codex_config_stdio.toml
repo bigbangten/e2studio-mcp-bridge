@@ -1,0 +1,10 @@
+[mcp_servers.e2studio]
+command = "python"
+args = ["D:\\workspace_ai\\e2studio-mcp-bridge\\mcp-server\\src\\e2studio_mcp_server\\server.py"]
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+enabled = true
+
+[mcp_servers.e2studio.env]
+E2STUDIO_BRIDGE_URL = "http://127.0.0.1:39232"
+E2STUDIO_BRIDGE_TOKEN = "replace-with-token-from-workspace-metadata"

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="com.example.e2studio.agent.feature"
+      label="e2 studio Agent Bridge"
+      version="0.2.0.qualifier"
+      provider-name="Example">
+
+   <description url="https://example.invalid/e2studio-agent-bridge">
+      Phase 1 read-only bridge for e2 studio (Renesas).
+   </description>
+
+   <plugin
+         id="com.example.e2studio.agent.bridge"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>

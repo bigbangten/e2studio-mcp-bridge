@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+  <feature url="features/com.example.e2studio.agent.feature_0.1.0.qualifier.jar"
+           id="com.example.e2studio.agent.feature"
+           version="0.1.0.qualifier">
+    <category name="com.example.e2studio.agent.category"/>
+  </feature>
+
+  <category-def
+      name="com.example.e2studio.agent.category"
+      label="e2 studio Agent Bridge"/>
+</site>
