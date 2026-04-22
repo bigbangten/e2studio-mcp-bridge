@@ -26,9 +26,12 @@ import java.util.regex.Pattern;
 public final class E2studioInventory {
 
     private static final Pattern VENDOR_BUNDLE = Pattern.compile(
-            "^(com\\.renesas)\\b.*", Pattern.CASE_INSENSITIVE);
+            "^(com|jp)\\.renesas\\b.*", Pattern.CASE_INSENSITIVE);
+    // Renesas Smart Configurator perspectives — verified in e2 studio 2025-04.1:
+    //   com.renesas.cdt.ra.settingseditor.RAConfigurationPerspective
+    //   (RX/RL78 families follow com.renesas.cdt.<family>.settingseditor.*Perspective pattern)
     private static final Pattern CONFIG_TOOLS_PERSPECTIVE = Pattern.compile(
-            "^com\\.renesas\\.smc\\.[^.]+\\.(?:.*)?perspective$", Pattern.CASE_INSENSITIVE);
+            "^com\\.renesas\\.cdt\\.[^.]+\\.settingseditor\\..*Perspective$", Pattern.CASE_INSENSITIVE);
 
     /** All installed Renesas bundles (name, version, state, location). */
     public Map<String, Object> listInventory() {

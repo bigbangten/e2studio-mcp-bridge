@@ -18,13 +18,19 @@ This is a **non-trivial, mildly invasive install**. Communicate clearly at each 
 
 ### Step 1 — Locate e2studio
 
-Scan standard install locations, in order:
-- `C:\Renesas\e2_studio\eclipse`
-- `C:\Renesas\e2_studio\*\eclipse`
-- `D:\Renesas\e2_studio\eclipse`
-- `C:\Program Files\Renesas\e2_studio\eclipse`
+Scan standard Renesas install locations. Renesas ships e² studio per chip family (RA/RX/RL78/RE/RH850) with per-release version directories, so globs are required:
 
-Confirm presence of `eclipsec.exe`, `plugins/`, `configuration/org.eclipse.equinox.simpleconfigurator/bundles.info`. Record the path as `$e2studio_ECLIPSE`.
+- `C:\Renesas\RA\e2studio_*\eclipse` (RA family, e.g. `e2studio_v2025-04.1_fsp_v6.0.0`)
+- `C:\Renesas\RX\e2studio_*\eclipse`
+- `C:\Renesas\RL78\e2studio_*\eclipse`
+- `C:\Renesas\e2_studio_*\eclipse` (standalone installs)
+- `C:\Renesas\e2_studio\eclipse`
+- `D:\Renesas\**\e2studio_*\eclipse`
+- `C:\Program Files\Renesas\**\eclipse`
+
+If **multiple versions** are found, list them with FSP version parsed from directory name and ask the user which to target (typical answer: latest). Record the chosen path as `$E2STUDIO_ECLIPSE`.
+
+Confirm presence of `e2studio.exe` or `e2studioc.exe`, `plugins/`, `configuration/org.eclipse.equinox.simpleconfigurator/bundles.info`.
 
 If the user passed `--e2studio-path`, use that instead.
 
