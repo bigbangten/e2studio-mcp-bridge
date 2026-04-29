@@ -1,7 +1,7 @@
 {
   "name": "e2",
-  "version": "0.3.0",
-  "description": "e2 studio (Renesas) live introspection + control bridge. Read everything (menus, command IDs, workbench state, builds, problems, launch configs, dialogs, debug runtime: PC/registers/memory). Mutating ops (step/resume/breakpoint/memory-write/register-write/launch-run) are gated behind /e2:danger on with TTL.",
+  "version": "0.4.0",
+  "description": "e2 studio (Renesas) live introspection + control bridge. Read everything (menus, command IDs, workbench state, builds, problems, launch configs, dialogs, debug runtime: PC/registers/memory/variables/expressions). Mutating ops (step/resume/breakpoint, memory/register write, launch run, expression eval, variable write, run-to-line, jump-to-line, watch add/remove) are gated behind /e2:danger on with TTL.",
   "author": {
     "name": "Open-source contributors"
   },

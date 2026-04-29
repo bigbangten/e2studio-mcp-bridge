@@ -306,6 +306,50 @@ async def call_launch_run(config_name: str, mode: str = "run") -> dict[str, Any]
     )
 
 
+# ─────────────────────────── Phase 6 (expression / watch / variable / run-to-line) ───────
+
+async def call_debug_evaluate(expression: str, frame: int = 0) -> dict[str, Any]:
+    return await bridge_client.post_json(
+        "/debug/evaluate", {"expression": expression, "frame": int(frame)}
+    )
+
+
+async def fetch_debug_watch_list() -> dict[str, Any]:
+    return await bridge_client.get_json("/debug/watch")
+
+
+async def call_debug_watch_add(expression: str) -> dict[str, Any]:
+    return await bridge_client.post_json("/debug/watch", {"expression": expression})
+
+
+async def call_debug_watch_remove(expression: Optional[str] = None,
+                                  all: bool = False) -> dict[str, Any]:
+    if all:
+        return await bridge_client.delete_json("/debug/watch?all=true")
+    q = f"?expression={quote_plus(expression)}" if expression else ""
+    return await bridge_client.delete_json(f"/debug/watch{q}")
+
+
+async def call_debug_variable_write(name: str, value: str, frame: int = 0) -> dict[str, Any]:
+    return await bridge_client.post_json(
+        "/debug/variable", {"name": name, "value": value, "frame": int(frame)}
+    )
+
+
+async def call_debug_run_to_line(file: str, line: int,
+                                 skip_breakpoints: bool = False) -> dict[str, Any]:
+    return await bridge_client.post_json(
+        "/debug/run-to-line",
+        {"file": file, "line": int(line), "skipBreakpoints": skip_breakpoints},
+    )
+
+
+async def call_debug_jump_to_line(file: str, line: int) -> dict[str, Any]:
+    return await bridge_client.post_json(
+        "/debug/jump-to-line", {"file": file, "line": int(line)}
+    )
+
+
 # ─────────────────────────── MCP server setup ───────────────────────────
 
 def create_server() -> FastMCP:
@@ -691,6 +735,79 @@ def create_server() -> FastMCP:
         launch configs, run unit tests, or start a debug session programmatically.
         """
         return await call_launch_run(config_name, mode)
+
+    # ─── Phase 6 tools (expression eval / watch / variable write / run-to-line) ───
+
+    @mcp.tool()
+    async def debug_evaluate(expression: str, frame: int = 0) -> dict[str, Any]:
+        """Evaluate a C/C++ expression in the context of a suspended stack frame.
+
+        Returns {ok, type, value, children?} on success or {ok:false, errors|error}.
+        Side-effecting expressions (e.g. function calls, assignment) actually run on
+        the target — that's why this is gate-checked.
+
+        Examples:
+          debug_evaluate("counter")            → primitive read
+          debug_evaluate("buf[3].flags & 0x80") → struct field bitmask
+          debug_evaluate("counter = 0")        → write via assignment expression
+          debug_evaluate("g_init_done()")      → call a target function
+        """
+        return await call_debug_evaluate(expression, frame)
+
+    @mcp.tool()
+    async def debug_watch_list() -> dict[str, Any]:
+        """List all expressions currently in the IDE's Expressions view (read-only)."""
+        return await fetch_debug_watch_list()
+
+    @mcp.tool()
+    async def debug_watch_add(expression: str) -> dict[str, Any]:
+        """Add a watch expression to the IDE's Expressions view.
+
+        It auto-evaluates against the currently suspended frame (if any) and re-evaluates
+        on each subsequent stop. Persists in the workspace until removed.
+        """
+        return await call_debug_watch_add(expression)
+
+    @mcp.tool()
+    async def debug_watch_remove(expression: Optional[str] = None,
+                                 all: bool = False) -> dict[str, Any]:
+        """Remove a watch expression by exact text match, or all=True to clear them all."""
+        return await call_debug_watch_remove(expression, all)
+
+    @mcp.tool()
+    async def debug_variable_write(name: str, value: str, frame: int = 0) -> dict[str, Any]:
+        """Modify a local variable's value in the suspended frame.
+
+        Looks up the variable by exact name in the frame's locals. For nested struct
+        fields, prefer debug_evaluate("obj.field = NEW") instead — that goes through
+        the C/C++ expression parser. Requires danger mode + suspended thread.
+        """
+        return await call_debug_variable_write(name, value, frame)
+
+    @mcp.tool()
+    async def debug_run_to_line(file: str, line: int,
+                                skip_breakpoints: bool = False) -> dict[str, Any]:
+        """Resume execution and stop at a specific line.
+
+        file: workspace-relative path (e.g. '/myproj/src/main.c') or absolute filesystem path.
+        line: 1-based line number.
+        skip_breakpoints: if true, ignore intermediate breakpoints between PC and target line.
+
+        Requires danger mode + an active CDT debug session.
+        """
+        return await call_debug_run_to_line(file, line, skip_breakpoints)
+
+    @mcp.tool()
+    async def debug_jump_to_line(file: str, line: int) -> dict[str, Any]:
+        """Move the PC to a given source line WITHOUT running there.
+
+        Implementation: CDT IJumpToLine. The intermediate code is NOT executed —
+        the program counter is simply set. This can leave variables/registers in an
+        unexpected state and is the most dangerous of the run-control operations.
+
+        Requires danger mode.
+        """
+        return await call_debug_jump_to_line(file, line)
 
     return mcp
 

@@ -1,5 +1,12 @@
 package com.example.e2studio.agent.bridge.index;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.debug.core.DebugException;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunch;
@@ -13,7 +20,9 @@ import org.eclipse.debug.core.model.IMemoryBlock;
 import org.eclipse.debug.core.model.IMemoryBlockExtension;
 import org.eclipse.debug.core.model.IMemoryBlockRetrieval;
 import org.eclipse.debug.core.model.IThread;
+import org.osgi.framework.Bundle;
 
+import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -250,6 +259,112 @@ public final class DebugController {
             out.put("error", e.getMessage());
             return out;
         }
+    }
+
+    /**
+     * Resume execution and stop at the given source line. Implemented via
+     * {@code org.eclipse.cdt.debug.core.model.IRunToLine} adapter on the top
+     * stack frame. Reflection so we don't compile-time depend on CDT.
+     */
+    public Map<String, Object> runToLine(String fileSpec, int line, boolean skipBreakpoints) {
+        return adapterCall(fileSpec, line,
+                "org.eclipse.cdt.debug.core.model.IRunToLine",
+                "runToLine",
+                new Class<?>[]{ String.class, int.class, boolean.class },
+                skipBreakpoints);
+    }
+
+    /**
+     * Move execution to a given source line without running there (PC jump).
+     * CDT exposes this as {@code IJumpToLine}.
+     */
+    public Map<String, Object> jumpToLine(String fileSpec, int line) {
+        return adapterCall(fileSpec, line,
+                "org.eclipse.cdt.debug.core.model.IJumpToLine",
+                "jumpToLine",
+                new Class<?>[]{ String.class, int.class },
+                null);
+    }
+
+    private Map<String, Object> adapterCall(String fileSpec, int line, String adapterClassName,
+                                            String method, Class<?>[] paramTypes, Object extra) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (fileSpec == null || fileSpec.isEmpty() || line <= 0) {
+            out.put("ok", false);
+            out.put("error", "file and positive line required");
+            return out;
+        }
+        IThread th = firstSuspendedThread();
+        if (th == null) {
+            out.put("ok", false);
+            out.put("error", "no suspended thread");
+            return out;
+        }
+        Class<?> adapterClass;
+        try {
+            Bundle cdt = Platform.getBundle("org.eclipse.cdt.debug.core");
+            if (cdt == null) {
+                out.put("ok", false);
+                out.put("error", "CDT bundle not present");
+                return out;
+            }
+            adapterClass = cdt.loadClass(adapterClassName);
+        } catch (ClassNotFoundException e) {
+            out.put("ok", false);
+            out.put("error", "CDT adapter class missing: " + adapterClassName);
+            return out;
+        }
+        try {
+            IStackFrame[] fs = th.getStackFrames();
+            if (fs.length == 0) { out.put("ok", false); out.put("error", "no frames"); return out; }
+            IStackFrame top = fs[0];
+            Object adapter = top.getAdapter(adapterClass);
+            if (adapter == null) {
+                // Try the thread itself; some CDT models adapt at thread level.
+                adapter = th.getAdapter(adapterClass);
+            }
+            if (adapter == null) {
+                out.put("ok", false);
+                out.put("error", "frame/thread does not adapt to " + adapterClass.getSimpleName());
+                return out;
+            }
+            // Resolve a workspace IFile for the file to use as source handle.
+            IResource res = resolveResource(fileSpec);
+            String sourceHandle;
+            if (res != null && res.getLocation() != null) sourceHandle = res.getLocation().toOSString();
+            else sourceHandle = fileSpec;
+
+            Method m = adapterClass.getMethod(method, paramTypes);
+            Object[] args;
+            if (paramTypes.length == 3) args = new Object[]{ sourceHandle, line, extra };
+            else args = new Object[]{ sourceHandle, line };
+            m.invoke(adapter, args);
+            out.put("ok", true);
+            out.put("sourceHandle", sourceHandle);
+            out.put("line", line);
+            return out;
+        } catch (Throwable t) {
+            Throwable cause = t.getCause() != null ? t.getCause() : t;
+            out.put("ok", false);
+            out.put("error", cause.getClass().getSimpleName() + ": " + cause.getMessage());
+            return out;
+        }
+    }
+
+    private IResource resolveResource(String fileSpec) {
+        IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
+        if (fileSpec.startsWith("/")) {
+            IFile file = root.getFile(new Path(fileSpec));
+            if (file != null && file.exists()) return file;
+        }
+        try {
+            java.io.File fs = new java.io.File(fileSpec);
+            if (fs.exists()) {
+                IFile[] files = root.findFilesForLocationURI(fs.toURI());
+                if (files.length > 0) return files[0];
+            }
+        } catch (Throwable ignored) {}
+        return null;
     }
 
     // ───────────────── helpers ─────────────────

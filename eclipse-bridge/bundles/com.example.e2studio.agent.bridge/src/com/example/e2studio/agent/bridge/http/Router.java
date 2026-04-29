@@ -21,6 +21,7 @@ import com.example.e2studio.agent.bridge.index.CommandIndexer;
 import com.example.e2studio.agent.bridge.index.ConsoleTail;
 import com.example.e2studio.agent.bridge.index.DebugController;
 import com.example.e2studio.agent.bridge.index.DebugInspector;
+import com.example.e2studio.agent.bridge.index.ExpressionController;
 import com.example.e2studio.agent.bridge.index.DialogInspector;
 import com.example.e2studio.agent.bridge.index.LaunchConfigAnalyzer;
 import com.example.e2studio.agent.bridge.index.LaunchRunner;
@@ -54,6 +55,7 @@ public final class Router {
     private final DebugInspector debugInspector = new DebugInspector();
     private final DebugController debugController = new DebugController();
     private final BreakpointController breakpointController = new BreakpointController();
+    private final ExpressionController expressionController = new ExpressionController();
     private final LaunchRunner launchRunner = new LaunchRunner();
     private final DialogInspector dialogInspector = new DialogInspector();
     private final ConsoleTail consoleTail = new ConsoleTail();
@@ -451,6 +453,92 @@ public final class Router {
                 if (cfg == null) cfg = strOrNull(body.get("name"));
                 String mode = strOrNull(body.get("mode"));
                 send(exchange, 200, ok(launchRunner.run(cfg, mode)));
+                return;
+            }
+
+            // ─────────────── Phase 6: expression eval / watch / variable / run-to-line ───────────────
+
+            if ("POST".equals(method) && "/debug/evaluate".equals(path)) {
+                if (!DangerGate.isOn()) { sendDangerOff(exchange); return; }
+                Object parsed = Json.parse(readBody(exchange.getRequestBody()));
+                if (!(parsed instanceof Map<?, ?>)) {
+                    send(exchange, 400, error("BAD_REQUEST", "JSON object body is required", null));
+                    return;
+                }
+                Map<?, ?> body = (Map<?, ?>) parsed;
+                String expr = strOrNull(body.get("expression"));
+                int frameIdx = 0;
+                Object f = body.get("frame");
+                if (f instanceof Number) frameIdx = ((Number) f).intValue();
+                send(exchange, 200, ok(expressionController.evaluate(expr, frameIdx)));
+                return;
+            }
+            if ("GET".equals(method) && "/debug/watch".equals(path)) {
+                send(exchange, 200, ok(expressionController.listWatch()));
+                return;
+            }
+            if ("POST".equals(method) && "/debug/watch".equals(path)) {
+                if (!DangerGate.isOn()) { sendDangerOff(exchange); return; }
+                Object parsed = Json.parse(readBody(exchange.getRequestBody()));
+                if (!(parsed instanceof Map<?, ?>)) {
+                    send(exchange, 400, error("BAD_REQUEST", "JSON object body is required", null));
+                    return;
+                }
+                String expr = strOrNull(((Map<?, ?>) parsed).get("expression"));
+                send(exchange, 200, ok(expressionController.addWatch(expr)));
+                return;
+            }
+            if ("DELETE".equals(method) && "/debug/watch".equals(path)) {
+                if (!DangerGate.isOn()) { sendDangerOff(exchange); return; }
+                String expr = query.get("expression");
+                if ("true".equalsIgnoreCase(query.get("all"))) expr = null;
+                send(exchange, 200, ok(expressionController.removeWatch(expr)));
+                return;
+            }
+            if ("POST".equals(method) && "/debug/variable".equals(path)) {
+                if (!DangerGate.isOn()) { sendDangerOff(exchange); return; }
+                Object parsed = Json.parse(readBody(exchange.getRequestBody()));
+                if (!(parsed instanceof Map<?, ?>)) {
+                    send(exchange, 400, error("BAD_REQUEST", "JSON object body is required", null));
+                    return;
+                }
+                Map<?, ?> body = (Map<?, ?>) parsed;
+                String name = strOrNull(body.get("name"));
+                String value = strOrNull(body.get("value"));
+                int frameIdx = 0;
+                Object f = body.get("frame");
+                if (f instanceof Number) frameIdx = ((Number) f).intValue();
+                send(exchange, 200, ok(expressionController.writeVariable(name, value, frameIdx)));
+                return;
+            }
+            if ("POST".equals(method) && "/debug/run-to-line".equals(path)) {
+                if (!DangerGate.isOn()) { sendDangerOff(exchange); return; }
+                Object parsed = Json.parse(readBody(exchange.getRequestBody()));
+                if (!(parsed instanceof Map<?, ?>)) {
+                    send(exchange, 400, error("BAD_REQUEST", "JSON object body is required", null));
+                    return;
+                }
+                Map<?, ?> body = (Map<?, ?>) parsed;
+                String file = strOrNull(body.get("file"));
+                Object ln = body.get("line");
+                int line = (ln instanceof Number) ? ((Number) ln).intValue() : -1;
+                Object skip = body.get("skipBreakpoints");
+                boolean skipBp = skip instanceof Boolean ? (Boolean) skip : false;
+                send(exchange, 200, ok(debugController.runToLine(file, line, skipBp)));
+                return;
+            }
+            if ("POST".equals(method) && "/debug/jump-to-line".equals(path)) {
+                if (!DangerGate.isOn()) { sendDangerOff(exchange); return; }
+                Object parsed = Json.parse(readBody(exchange.getRequestBody()));
+                if (!(parsed instanceof Map<?, ?>)) {
+                    send(exchange, 400, error("BAD_REQUEST", "JSON object body is required", null));
+                    return;
+                }
+                Map<?, ?> body = (Map<?, ?>) parsed;
+                String file = strOrNull(body.get("file"));
+                Object ln = body.get("line");
+                int line = (ln instanceof Number) ? ((Number) ln).intValue() : -1;
+                send(exchange, 200, ok(debugController.jumpToLine(file, line)));
                 return;
             }
 
