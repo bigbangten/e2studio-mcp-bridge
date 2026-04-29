@@ -31,7 +31,7 @@ class BridgeSettings:
     def from_env(cls) -> "BridgeSettings":
         return cls(
             base_url=os.environ.get("E2STUDIO_BRIDGE_URL", "http://127.0.0.1:39232").rstrip("/"),
-            token=os.environ.get("e2studio_BRIDGE_TOKEN", "").strip(),
+            token=os.environ.get("E2STUDIO_BRIDGE_TOKEN", "").strip(),
         )
 
 
@@ -58,7 +58,7 @@ def _read_discovery_file() -> Optional[Tuple[str, str]]:
 def _candidate_token_paths() -> list[Path]:
     """Fallback: workspace-local token files. Used only if discovery file is missing."""
     out: list[Path] = []
-    ws = os.environ.get("e2studio_WORKSPACE")
+    ws = os.environ.get("E2STUDIO_WORKSPACE")
     if ws:
         out.append(Path(ws) / ".metadata" / ".plugins" / "com.example.e2studio.agent.bridge" / "token")
     out.append(Path.home() / "workspace_e2studio" / ".metadata" / ".plugins"

@@ -3,7 +3,7 @@
 This directory is the **Claude Code plugin** part of [e2studio-mcp-bridge](../). It packages:
 
 - a skill (`e2studio-menu-lookup`) that forces the AI to verify e2studio UI paths against the live workbench;
-- slash commands (`/s32`, `/e2:setup`, `/e2:status`) that drive the MCP bridge;
+- slash commands (`/e2:setup`, `/e2:status`, `/e2:menu`, `/e2:ask`) that drive the MCP bridge;
 - an MCP server registration (via `plugin.json`) that auto-starts the Python wrapper.
 
 ## Install
@@ -12,7 +12,7 @@ From Claude Code:
 
 ```
 /plugin marketplace add bigbangten/e2studio-mcp-bridge
-/plugin install e2studio-mcp
+/plugin install e2@e2studio-mcp-bridge
 ```
 
 Then run once:
@@ -25,11 +25,10 @@ This detects your e2studio install, deploys the Eclipse bundle, restarts e2studi
 
 ## After install
 
-- `/s32 status` — quick health + current perspective/editor
-- `/s32 menu "<keyword>"` — find where any command lives in the UI (via live workbench, not documentation)
-- `/s32 view <name>` — open a closed view
-- `/s32 perspective <name>` — switch perspective
-- `/s32 problems` — dump Problems view
+- `/e2:status` — quick health + current perspective/editor
+- `/e2:menu "<keyword>"` — find where any command lives in the UI (via live workbench, not documentation)
+- `/e2:ask "<question>"` — free-form Q&A using live introspection
+- `/e2:setup` — re-run setup (detects e2studio, installs plugin, verifies bridge)
 
 Any time you ask a free-form e2studio UI question, the `e2studio-menu-lookup` skill auto-activates and follows its 5-step verification protocol. This is the design goal — no more "click the menu that doesn't exist".
 

@@ -45,7 +45,7 @@ if ! "$PYTHON" -c "import e2studio_mcp_server" 2>/dev/null; then
 fi
 
 # Resolve bridge token from workspace metadata
-TOKEN_PATH="${e2studio_WORKSPACE:-$HOME/workspace_e2studio}/.metadata/.plugins/com.example.e2studio.agent.bridge/token"
+TOKEN_PATH="${E2STUDIO_WORKSPACE:-$HOME/workspace_e2studio}/.metadata/.plugins/com.example.e2studio.agent.bridge/token"
 if [ ! -f "$TOKEN_PATH" ]; then
   # Windows default-user fallback
   CANDIDATE="/c/Users/$USER/workspace_e2studio/.metadata/.plugins/com.example.e2studio.agent.bridge/token"
@@ -59,7 +59,7 @@ if [ -f "$TOKEN_PATH" ]; then
       icacls "$(cygpath -w "$TOKEN_PATH" 2>/dev/null || echo "$TOKEN_PATH")" //grant "$USER:R" >/dev/null 2>&1 || true
     fi
   fi
-  export e2studio_BRIDGE_TOKEN="$(cat "$TOKEN_PATH" | tr -d '\r\n')"
+  export E2STUDIO_BRIDGE_TOKEN="$(cat "$TOKEN_PATH" | tr -d '\r\n')"
 fi
 
 export E2STUDIO_BRIDGE_URL="${E2STUDIO_BRIDGE_URL:-http://127.0.0.1:39232}"

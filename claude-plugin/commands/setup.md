@@ -3,7 +3,7 @@ description: One-shot installer for the e2 studio (Renesas) bridge plug-in. Dete
 argument-hint: [--e2studio-path <path>] [--rebuild] [--no-restart]
 ---
 
-Install the `com.example.e2studio.agent.bridge` Eclipse plug-in into the user's e2 studio (Renesas) so the `/s32` commands work.
+Install the `com.example.e2studio.agent.bridge` Eclipse plug-in into the user's e2 studio (Renesas) so the `/e2:*` commands work.
 
 This is a **non-trivial, mildly invasive install**. Communicate clearly at each step. If anything feels wrong, stop and ask.
 
@@ -154,7 +154,7 @@ Expect `ok: true` and `data.workbenchRunning: true`.
 Tell the user:
 - Install path
 - Plugin version installed
-- How to call `/s32 status` to verify any time
+- How to call `/e2:status` to verify any time
 - Note: e2studio from now on always starts with the bridge. Plain restarts (no `-clean`) are fine after this first install.
 
 ## Failure handling
@@ -170,7 +170,7 @@ Print clear diagnostic output at every failure. Do not silently swallow errors.
 ## Post-install
 
 Tell the user about the companion commands:
-- `/s32 status` — check health any time
-- `/s32 menu "X"` — find any UI path
-- `/s32 view "X"` — open a view
+- `/e2:status` — check health any time
+- `/e2:menu "X"` — find any UI path
+- `/e2:ask "X"` — free-form Q&A about the running e2studio
 - Skill `e2studio-menu-lookup` auto-activates when they ask e2studio UI questions

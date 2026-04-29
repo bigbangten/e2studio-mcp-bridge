@@ -12,7 +12,7 @@ Live introspection bridge for **Renesas e² studio** — gives Claude/Codex accu
 
 ## Install
 
-Same flow as the S32DS parent project — see [QUICKSTART.md](QUICKSTART.md). The installer detects a `C:\Renesas\e2_studio\eclipse\` install.
+Same flow as the S32DS parent project — see [QUICKSTART.md](QUICKSTART.md). The installer detects e² studio installs under `C:\Renesas\RA\e2studio_*\eclipse`, `C:\Renesas\RX\e2studio_*\eclipse`, `C:\Renesas\RL78\e2studio_*\eclipse`, or the legacy `C:\Renesas\e2_studio\eclipse`. Multiple co-installed versions are supported (the installer asks which to target).
 
 ## Phase 4 debug runtime endpoints
 

@@ -76,7 +76,7 @@ def ensure_token_readable() -> None:
     bash read. Re-grant read access to the current user. Idempotent."""
     if os.name != "nt":
         return
-    workspace = os.environ.get("e2studio_WORKSPACE") or os.path.expanduser("~/workspace_e2studio")
+    workspace = os.environ.get("E2STUDIO_WORKSPACE") or os.path.expanduser("~/workspace_e2studio")
     token_path = Path(workspace) / ".metadata" / ".plugins" / "com.example.e2studio.agent.bridge" / "token"
     if not token_path.exists():
         return  # bridge not started yet; nothing to do
@@ -108,12 +108,12 @@ def main() -> None:
     os.environ.setdefault("E2STUDIO_BRIDGE_URL", "http://127.0.0.1:39232")
 
     # Load token from workspace metadata if env var is unset
-    if not os.environ.get("e2studio_BRIDGE_TOKEN"):
-        workspace = os.environ.get("e2studio_WORKSPACE") or os.path.expanduser("~/workspace_e2studio")
+    if not os.environ.get("E2STUDIO_BRIDGE_TOKEN"):
+        workspace = os.environ.get("E2STUDIO_WORKSPACE") or os.path.expanduser("~/workspace_e2studio")
         token_path = Path(workspace) / ".metadata" / ".plugins" / "com.example.e2studio.agent.bridge" / "token"
         if token_path.exists():
             try:
-                os.environ["e2studio_BRIDGE_TOKEN"] = token_path.read_text().strip()
+                os.environ["E2STUDIO_BRIDGE_TOKEN"] = token_path.read_text().strip()
             except PermissionError:
                 print(
                     f"[e2studio-mcp bootstrap] cannot read {token_path}; "

@@ -42,7 +42,7 @@ Run these checks and print a summary table:
 
 - If e2studio not found: STOP. Tell me: "e2 studio (Renesas) not detected.
   This plugin requires e2studio to be pre-installed (Renesas account needed).
-  Download: https://www.nxp.com/design/software/development-software/s32-design-studio-ide:S32-DESIGN-STUDIO-IDE
+  Download: https://www.renesas.com/en/software-tool/e-studio
   Re-run this prompt after installing e2studio."
   Do not attempt any other step.
 
@@ -70,7 +70,7 @@ All prerequisites verified.
 Now run these three slash commands in Claude Code, one at a time:
 
   1. /plugin marketplace add bigbangten/e2studio-mcp-bridge
-  2. /plugin install s32
+  2. /plugin install e2@e2studio-mcp-bridge
   3. /e2:setup
 
 The third command takes ~60 seconds — it auto-installs the Eclipse plug-in
@@ -81,7 +81,7 @@ When /e2:setup finishes with a healthy status, test with a natural question:
 
   "e2studio에서 Rebuild Last Target 어디 있어?"
 
-The s32-menu-lookup skill should auto-trigger and give you the exact path
+The e2studio-menu-lookup skill should auto-trigger and give you the exact path
 (hint: it's NOT on the Project menu for managed-build projects).
 ====================================================================
 
@@ -104,18 +104,18 @@ Begin.
 2. Auto-installs anything missing (Python 3.11 via winget).
 3. Prints the final 3 slash commands for you to type.
 4. You type them. `/e2:setup` takes ~60s to deploy the Eclipse plug-in.
-5. Done. Ask any e2studio question and the `s32-menu-lookup` skill auto-triggers.
+5. Done. Ask any e2studio question and the `e2studio-menu-lookup` skill auto-triggers.
 
 ## Troubleshooting
 
 **"`/e2:*` commands don't appear after install"**
-Run `/plugin list` to confirm `s32` is installed. If an older `e2studio-mcp` is there, `/plugin uninstall e2studio-mcp` and reinstall. Refresh the marketplace with `/plugin marketplace update` to pull the latest.
+Run `/plugin list` to confirm `e2` is installed. Refresh the marketplace with `/plugin marketplace update` to pull the latest.
 
 **"MCP server didn't start"**
 Run `/e2:status` — it'll diagnose. Common causes: Python 3.10+ not on PATH, e2studio not running, or the bridge plug-in not installed (re-run `/e2:setup`).
 
 **"I don't have e2studio yet"**
-Install it first: https://www.nxp.com/design/software/development-software/s32-design-studio-ide — requires a free Renesas account.
+Install it first: https://www.renesas.com/en/software-tool/e-studio — requires a free Renesas account.
 
 **Non-Windows**
 Currently Windows-only due to path assumptions in `/e2:setup`. Linux/Mac support is open for contribution.

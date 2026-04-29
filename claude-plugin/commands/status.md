@@ -9,7 +9,7 @@ Quick status check for the e2studio MCP bridge. Use when the user asks "is it wo
 ```bash
 # Resolve bridge URL + token. Priority:
 #   1. ~/.e2studio-mcp/bridge.json (discovery file, v0.1.4+)
-#   2. $e2studio_WORKSPACE/.metadata/.plugins/.../token (env-specified workspace)
+#   2. $E2STUDIO_WORKSPACE/.metadata/.plugins/.../token (env-specified workspace)
 #   3. ~/workspace_e2studio/.metadata/.plugins/.../token (Windows default)
 # We use USERPROFILE on Windows as canonical home — $USER is empty in some MinGW
 # bash shells, so don't rely on it.
@@ -24,7 +24,7 @@ if [ -f "$DISCOVERY" ]; then
   TOKEN=$(python -c "import json,sys; print(json.load(open(r'$DISCOVERY'))['token'])")
 else
   # Fallback: workspace-local token file (for pre-v0.1.4 bridges)
-  WS="${e2studio_WORKSPACE:-$HOME_DIR/workspace_e2studio}"
+  WS="${E2STUDIO_WORKSPACE:-$HOME_DIR/workspace_e2studio}"
   TOKEN_PATH="$WS/.metadata/.plugins/com.example.e2studio.agent.bridge/token"
   if [ ! -f "$TOKEN_PATH" ]; then
     echo "Bridge not reachable:"

@@ -5,7 +5,7 @@ This doc is **written for an AI agent to execute autonomously**, but humans can 
 ## Scope
 
 - **OS**: Windows 10/11 (Linux/macOS untested).
-- **Target**: Renesas e2 studio (Eclipse 4.20, June 2021).
+- **Target**: Renesas e² studio 2025-04 or newer (Eclipse 4.36 / 2024-10 base, Java 21 runtime). Older releases (Eclipse 4.20+) likely work but are untested.
 - **For Claude Code users**: prefer running `/e2:setup` — that's the automated version of this file.
 
 ## Prerequisites
@@ -46,10 +46,12 @@ mvn --version
 ### Option 1a — Download a prebuilt release (recommended)
 
 ```bash
+DEST="$HOME/.cache/e2studio-mcp-bridge"
+mkdir -p "$DEST"
 gh release download --repo bigbangten/e2studio-mcp-bridge \
   --pattern 'com.example.e2studio.agent.bridge_*.jar' \
-  --dir /tmp/s32-install
-JAR=$(ls /tmp/s32-install/com.example.e2studio.agent.bridge_*.jar | head -1)
+  --dir "$DEST" --clobber
+JAR=$(ls "$DEST"/com.example.e2studio.agent.bridge_*.jar | sort -V | tail -1)
 ```
 
 ### Option 1b — Build from source
@@ -61,7 +63,7 @@ mvn -f eclipse-bridge/releng/pom.xml clean verify
 JAR=$(ls eclipse-bridge/releng/com.example.e2studio.agent.repository/target/repository/plugins/com.example.e2studio.agent.bridge_*.jar | head -1)
 ```
 
-**Why all those `MAVEN_OPTS`?** JDK 17+ caps XML entity sizes at 100,000 chars by default; Eclipse 2021-06's p2 metadata exceeds that. Disabling the caps is safe for local builds.
+**Why all those `MAVEN_OPTS`?** JDK 17+ caps XML entity sizes at 100,000 chars by default; Eclipse's p2 metadata exceeds that. Disabling the caps is safe for local builds.
 
 Extract the version qualifier:
 
@@ -191,7 +193,7 @@ tool_timeout_sec = 120
 
 [mcp_servers.e2studio.env]
 E2STUDIO_BRIDGE_URL = "http://127.0.0.1:39232"
-e2studio_BRIDGE_TOKEN = "<paste_token_from_step_6>"
+E2STUDIO_BRIDGE_TOKEN = "<paste_token_from_step_6>"
 ```
 
 Test: `codex exec "use the e2studio tool to call fetch_health"`.
