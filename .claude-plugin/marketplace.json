@@ -8,7 +8,7 @@
       "name": "e2",
       "source": "./claude-plugin",
       "description": "Live introspection bridge for Renesas e² studio (RA/RX/RL78/RE/RH850 families). Provides /e2 slash commands and a skill that forces AI to verify UI paths against the running workbench instead of guessing from documentation.",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ]
 }

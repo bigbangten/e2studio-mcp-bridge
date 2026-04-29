@@ -1,7 +1,7 @@
 {
   "name": "e2",
-  "version": "0.1.8",
-  "description": "e2 studio (Renesas) live introspection bridge. Gives Claude/Codex accurate menu paths, command IDs, workbench state, build/problem info, launch config analysis, and dialog inspection — so the AI stops directing users to non-existent menus or unsafe flash/debug actions.",
+  "version": "0.3.0",
+  "description": "e2 studio (Renesas) live introspection + control bridge. Read everything (menus, command IDs, workbench state, builds, problems, launch configs, dialogs, debug runtime: PC/registers/memory). Mutating ops (step/resume/breakpoint/memory-write/register-write/launch-run) are gated behind /e2:danger on with TTL.",
   "author": {
     "name": "Open-source contributors"
   },

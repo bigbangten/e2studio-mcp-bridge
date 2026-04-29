@@ -228,6 +228,84 @@ async def fetch_console_tail(name: Optional[str] = None,
     return await bridge_client.get_json(f"/console/tail?{'&'.join(q)}")
 
 
+# ─────────────────────────── Phase 5 (danger gate + mutators) ───────────────────────────
+
+async def fetch_danger_state() -> dict[str, Any]:
+    return await bridge_client.get_json("/danger/state")
+
+
+async def call_danger_enable(ttl_minutes: Optional[int] = None) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    if ttl_minutes is not None and ttl_minutes > 0:
+        payload["ttlMs"] = int(ttl_minutes) * 60 * 1000
+    return await bridge_client.post_json("/danger/enable", payload)
+
+
+async def call_danger_disable() -> dict[str, Any]:
+    return await bridge_client.post_json("/danger/disable", {})
+
+
+async def call_debug_step(kind: str = "over") -> dict[str, Any]:
+    return await bridge_client.post_json(f"/debug/step?kind={quote_plus(kind)}", {})
+
+
+async def call_debug_resume() -> dict[str, Any]:
+    return await bridge_client.post_json("/debug/resume", {})
+
+
+async def call_debug_suspend() -> dict[str, Any]:
+    return await bridge_client.post_json("/debug/suspend", {})
+
+
+async def call_debug_terminate() -> dict[str, Any]:
+    return await bridge_client.post_json("/debug/terminate", {})
+
+
+async def call_debug_restart() -> dict[str, Any]:
+    return await bridge_client.post_json("/debug/restart", {})
+
+
+async def call_debug_breakpoint_set(file: str, line: int,
+                                    condition: Optional[str] = None) -> dict[str, Any]:
+    body: dict[str, Any] = {"file": file, "line": int(line)}
+    if condition:
+        body["condition"] = condition
+    return await bridge_client.post_json("/debug/breakpoints", body)
+
+
+async def call_debug_breakpoint_clear(file: Optional[str] = None,
+                                      line: Optional[int] = None,
+                                      all: bool = False) -> dict[str, Any]:
+    if all:
+        return await bridge_client.delete_json("/debug/breakpoints?all=true")
+    q = []
+    if file:
+        q.append(f"file={quote_plus(file)}")
+    if line is not None:
+        q.append(f"line={int(line)}")
+    return await bridge_client.delete_json(
+        "/debug/breakpoints" + ("?" + "&".join(q) if q else "")
+    )
+
+
+async def call_debug_memory_write(addr: str, hex: str) -> dict[str, Any]:
+    return await bridge_client.post_json("/debug/memory", {"addr": addr, "hex": hex})
+
+
+async def call_debug_register_write(name: str, value: str,
+                                    group: Optional[str] = None) -> dict[str, Any]:
+    body: dict[str, Any] = {"name": name, "value": value}
+    if group:
+        body["group"] = group
+    return await bridge_client.post_json("/debug/registers", body)
+
+
+async def call_launch_run(config_name: str, mode: str = "run") -> dict[str, Any]:
+    return await bridge_client.post_json(
+        "/launch/run", {"configName": config_name, "mode": mode}
+    )
+
+
 # ─────────────────────────── MCP server setup ───────────────────────────
 
 def create_server() -> FastMCP:
@@ -494,6 +572,125 @@ def create_server() -> FastMCP:
                            lines: int = 100) -> dict[str, Any]:
         """Last N lines of a console. Match by partial name (e.g. 'Renesas debugger') or index from console_list."""
         return await fetch_console_tail(name, index, lines)
+
+    # ─── Phase 5 tools (danger gate + mutating debug/launch operations) ───
+    #
+    # Every "*_write", debug_step/resume/suspend/terminate/restart, breakpoint_*,
+    # and launch_run is gated server-side. While the gate is OFF (default), the
+    # bridge returns 403 with a hint to run /e2:danger on first. The gate has a
+    # TTL (default 30 min, max 4 hours) and resets on bridge restart.
+
+    @mcp.tool()
+    async def danger_state() -> dict[str, Any]:
+        """Show the current danger-mode state: {enabled, remainingMs, expiresAtEpochMs}.
+
+        Read-only. Useful before calling any mutating tool to know whether the gate is open.
+        """
+        return await fetch_danger_state()
+
+    @mcp.tool()
+    async def danger_enable(ttl_minutes: int = 30) -> dict[str, Any]:
+        """Open the danger gate so mutating debug/launch ops are allowed.
+
+        ttl_minutes default 30, max 240. After the TTL expires the gate auto-closes;
+        bridge restart also closes it. Pair with danger_disable() to close early.
+        """
+        return await call_danger_enable(ttl_minutes)
+
+    @mcp.tool()
+    async def danger_disable() -> dict[str, Any]:
+        """Close the danger gate immediately."""
+        return await call_danger_disable()
+
+    @mcp.tool()
+    async def debug_step(kind: str = "over") -> dict[str, Any]:
+        """Single-step the first suspended thread. kind in {into, over, return}.
+
+        Requires danger mode ON. Returns {ok, kind, threadName} on success or
+        {ok:false, error} when no thread is suspended or the step kind isn't supported.
+        """
+        return await call_debug_step(kind)
+
+    @mcp.tool()
+    async def debug_resume() -> dict[str, Any]:
+        """Resume the first suspended debug target. Requires danger mode."""
+        return await call_debug_resume()
+
+    @mcp.tool()
+    async def debug_suspend() -> dict[str, Any]:
+        """Suspend the first running debug target. Requires danger mode."""
+        return await call_debug_suspend()
+
+    @mcp.tool()
+    async def debug_terminate() -> dict[str, Any]:
+        """Terminate ALL live launches. Requires danger mode. Returns count terminated."""
+        return await call_debug_terminate()
+
+    @mcp.tool()
+    async def debug_restart() -> dict[str, Any]:
+        """Terminate the first live launch and re-launch its configuration in the same mode."""
+        return await call_debug_restart()
+
+    @mcp.tool()
+    async def debug_breakpoint_set(file: str, line: int,
+                                   condition: Optional[str] = None) -> dict[str, Any]:
+        """Add a C/C++ line breakpoint via CDT (CDIDebugModel.createLineBreakpoint).
+
+        file: workspace-relative path (e.g. '/myproj/src/main.c') or absolute filesystem path.
+        line: 1-based line number.
+        condition: optional GDB conditional expression (e.g. 'i == 5').
+
+        Requires danger mode. Returns {ok, sourceHandle, line} or error if CDT not available
+        or the file isn't in the workspace.
+        """
+        return await call_debug_breakpoint_set(file, line, condition)
+
+    @mcp.tool()
+    async def debug_breakpoint_clear(file: Optional[str] = None,
+                                     line: Optional[int] = None,
+                                     all: bool = False) -> dict[str, Any]:
+        """Remove a breakpoint.
+
+        Either pass file+line for a precise match, or all=True to wipe every breakpoint
+        in the workspace. Requires danger mode.
+        """
+        return await call_debug_breakpoint_clear(file, line, all)
+
+    @mcp.tool()
+    async def debug_memory_write(addr: str, hex: str) -> dict[str, Any]:
+        """Write hex bytes to target memory at addr. Requires danger mode + suspended target.
+
+        addr accepts '0x...', pure hex (3+ chars), or decimal. hex is the byte payload
+        without 0x prefix, even length, max 4096 bytes (8192 hex chars).
+        Whitespace and underscores in the hex string are ignored.
+        """
+        return await call_debug_memory_write(addr, hex)
+
+    @mcp.tool()
+    async def debug_register_write(name: str, value: str,
+                                   group: Optional[str] = None) -> dict[str, Any]:
+        """Set a register on the first suspended thread's top frame.
+
+        name: register name (e.g. 'r0', 'pc', 'cpsr'). Case-insensitive.
+        value: string accepted by IRegister.verifyValue (typically hex like '0x1234' or decimal).
+        group: optional register group name (e.g. 'General Registers') to disambiguate.
+
+        Requires danger mode. Returns {ok, group, register, newValue} or error.
+        """
+        return await call_debug_register_write(name, value, group)
+
+    @mcp.tool()
+    async def launch_run(config_name: str, mode: str = "run") -> dict[str, Any]:
+        """Run a stored launch configuration by name, in the given mode.
+
+        config_name: matches the displayed launch-config name in 'Run > Run Configurations…'.
+        mode: 'run' | 'debug' (Renesas Flash launches and most other custom launch types
+              use 'run' mode). Use launch_configs() to discover available configs first.
+
+        Requires danger mode. This is the canonical way to flash via Renesas Flash Programmer
+        launch configs, run unit tests, or start a debug session programmatically.
+        """
+        return await call_launch_run(config_name, mode)
 
     return mcp
 
